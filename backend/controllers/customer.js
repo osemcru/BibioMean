@@ -1,17 +1,22 @@
 import customer from "../models/customer.js";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import moment from "moment";
 
 const registerCustomer = async (req, res) => {
   if (!req.body.name || !req.body.email || !req.body.password)
     return res.status(400).send("Incomplete data");
 
-  const existingCustomer = await customer.findOne({ name: req.body.name });
+  const existingCustomer = await customer.findOne({ email: req.body.email });
   if (existingCustomer)
-    return res.status(400).send("The customer already exist");
+    return res.status(400).send("The customer is already registered");
+
+    const hash = await bcrypt.hash(req.body.password, 10);
 
   const customerSchema = new customer({
     name: req.body.name,
     email: req.body.email,
-    password: req.body.password,
+    password: hash,
     dbStatus: true,
   });
 
@@ -58,9 +63,37 @@ const deleteCustomer = async (req, res) => {
     : res.status(200).send("Customer deleted");
 };
 
+const login = async (req, res) => {
+  if (!req.body.email || !req.body.password)
+    return res.status(400).send({ message: "Incomplete data" });
+
+  const customerLogin = await customer.findOne({ email: req.body.email });
+  if (!customerLogin)
+    return res.status(400).send({ message: "Wrong email or password" });
+  const hash = await bcrypt.compare(req.body.password, customerLogin.password);
+  if (!hash)
+    return res.status(400).send({ message: "Wrong email or password" });
+
+  try {
+    return res.status(200).json({
+      token: jwt.sign(
+        {
+          _id: customerLogin._id,
+          name: customerLogin.name,
+          iat: moment().unix(),
+        },
+        process.env.SECRET_KEY_JWT
+      ),
+    });
+  } catch (e) {
+    return res.status(400).send({ message: "Login error" }, e);
+  }
+};
+
 export default {
   registerCustomer,
   listCustomer,
   updateCustomer,
   deleteCustomer,
+  login,
 };
