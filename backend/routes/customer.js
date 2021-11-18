@@ -7,6 +7,5 @@ router.post("/registerCustomer", customer.registerCustomer);
 router.get("/listCustomer", customer.listCustomer);
 router.put("/updateCustomer", customer.updateCustomer);
 router.delete("/deleteCustomer/:_id", customer.deleteCustomer);
-router.post("/login", customer.login);
 
 export default router;
